@@ -1,6 +1,6 @@
 {
   "name": "python-quiz-web",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "A Python basics quiz with a tested GitHub Pages deployment pipeline.",
