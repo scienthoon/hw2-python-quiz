@@ -56,3 +56,40 @@ tests/quiz.test.mjs      동작 검증
 AI 도구 Codex로 구현했습니다. GitHub의 공식 Pages 워크플로에 따라 테스트와 배포 단계를 연결했습니다. 자동 테스트와 브라우저에서의 실제 동작 확인은 각각 따로 수행합니다. 배포 성공 여부는 Actions 실행 결과와 배포 URL에서 확인할 수 있습니다.
 
 참고: [GitHub Pages 사용자 정의 워크플로](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
+
+## HW3 Docker 기반 CI/CD
+
+정적 웹 화면을 유지하면서 Docker 컨테이너에 Node.js 웹서버와 실제 퀴즈 채점 API를 추가했습니다.
+
+```sh
+docker build --build-arg COMMIT_SHA=local -t hw3-python-quiz:local .
+docker run --rm -p 127.0.0.1:18081:8080 hw3-python-quiz:local
+```
+
+브라우저에서 `http://127.0.0.1:18081`을 엽니다. `GET /health`와 `GET /api/version`은 실행 중인 버전과 커밋을 반환합니다. `POST /api/grade`는 `{"answers":[1,0,2,1,2]}`를 받아 60점을 반환합니다. 선택지 번호는 0부터 시작합니다.
+
+### 자동화 연결
+
+GitHub 저장소의 Actions secrets에 `DOCKERHUB_USERNAME`과 `DOCKERHUB_TOKEN`을 등록합니다. 토큰은 Docker Hub 읽기와 쓰기 권한을 가진 과제 전용 토큰을 사용하고, 코드나 커밋에 넣지 않습니다. Docker Hub의 이미지 저장소 이름은 `hw3-python-quiz`입니다.
+
+로컬 Mac ARM64 러너에는 `hw3-quiz` 라벨을 사용합니다. 러너를 연결하는 것은 GitHub 워크플로 코드가 해당 컴퓨터에서 실행되도록 허용하는 작업입니다. 공개 저장소에 연결할 때는 신뢰하지 않는 변경을 실행하지 않도록 주의해야 합니다. 이 배포 워크플로는 main push만 처리하며 PR 이벤트로 로컬 배포를 실행하지 않습니다. 러너는 검증할 때 직접 실행하고, OS 로그인 시 자동 시작하는 서비스로 설치하지 않습니다.
+
+`docker-cicd.yml`은 컨테이너 내부의 14개 테스트, 실행 후 실제 채점 API 확인, AMD64/ARM64 이미지 빌드 및 Docker Hub 업로드를 수행합니다. 이어서 self-hosted Mac 러너가 해당 커밋 태그의 이미지를 내려받아 배포합니다. 기존 GitHub Pages 워크플로는 유지합니다.
+
+### Blue-green 배포와 검증
+
+```sh
+node scripts/deploy.mjs --image "$DOCKERHUB_USERNAME/hw3-python-quiz:COMMIT_SHA" --commit COMMIT_SHA
+```
+
+새 컨테이너의 health와 실제 채점 API가 통과한 뒤 NGINX 설정을 검사하고 graceful reload로 연결을 바꿉니다. 이전 컨테이너를 즉시 끄지 않아 전환 중 처리 중인 요청을 보호합니다. 배포 전·중·후에 실제 `POST /api/grade` 요청을 보내 HTTP 상태와 60점 결과, 버전 및 커밋을 기록합니다. 배포 실패 시 이전 설정으로 되돌리며, 검사된 요청 범위에서만 무중단 여부를 판정합니다.
+
+기본 주소는 `http://127.0.0.1:18080`이며 외부 네트워크에는 포트를 공개하지 않습니다. 상태와 원시 측정값은 `HW3_DEPLOY_ROOT`의 evidence 폴더에 저장합니다. 로컬 미리보기에서는 `HW3_PROJECT`, `HW3_PORT`, `HW3_DEPLOY_ROOT`를 별도로 지정해 다른 컨테이너를 보호할 수 있습니다.
+
+수동 교체 방식의 비교 실험은 별도 포트 18083에서 수행하며, 인위적인 지연 없이 실제 stop/remove/start 구간을 측정합니다.
+
+```sh
+node scripts/compare-stop-start.mjs --old OLD_IMAGE --new NEW_IMAGE --output evidence
+```
+
+구성 파일이 있다는 것만으로 원격 CI/CD 성공을 뜻하지 않습니다. Docker Hub 인증과 러너 연결 후 실제 Actions 결과 및 측정값을 확인해야 합니다.

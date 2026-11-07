@@ -5,3 +5,6 @@ node_modules/
 .env
 .env.*
 !.env.example
+.hw3-state/
+runtime/
+evidence/
