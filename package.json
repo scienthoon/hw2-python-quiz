@@ -1,9 +1,9 @@
 {
   "name": "python-quiz-web",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
-  "description": "A Python basics quiz with a tested GitHub Pages deployment pipeline.",
+  "description": "A Python basics quiz with tested Docker builds and measured blue-green deployments.",
   "engines": { "node": ">=20" },
   "scripts": {
     "dev": "node scripts/serve.mjs",

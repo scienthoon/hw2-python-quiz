@@ -96,7 +96,9 @@ try {
   monitoring=false;if(monitorTask)await monitorTask;
   if(prior&&oldConfig){
     await atomic(confPath,oldConfig);
-    if(switched){await docker(['cp',confPath,`${proxy}:/etc/nginx/conf.d/default.conf`]);await docker(['exec',proxy,'nginx','-s','reload']);}
+    await docker(['cp',confPath,`${proxy}:/etc/nginx/conf.d/default.conf`]);
+    await docker(['exec',proxy,'nginx','-t']);
+    if(switched)await docker(['exec',proxy,'nginx','-s','reload']);
     await atomic(statePath,JSON.stringify(prior,null,2)+'\n');
   }
   if(!prior){await removeOwned(proxy);}

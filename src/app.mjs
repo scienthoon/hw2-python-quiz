@@ -16,7 +16,7 @@ function renderQuestion(focus = false) {
     <section class="intro">
       <p class="eyebrow">A LITTLE PYTHON, EVERY DAY</p>
       <h1 tabindex="-1">한 문제씩, 파이썬을 익혀요.</h1>
-      <p>정답 확인부터 오답 복습까지, 다섯 문제로 기초를 탄탄하게.</p>
+      <p>다섯 문제를 풀고 해설을 읽으며, 헷갈린 기초 개념을 복습해요.</p>
     </section>
     <div class="workspace">
       <section class="question-card" aria-labelledby="question-title">
